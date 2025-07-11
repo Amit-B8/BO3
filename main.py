@@ -120,27 +120,31 @@ def second_game_placeholder():
         current_player = "X"  # Tie fallback
 
     # Set up game instructions
-    status_label.config(text=f"Game 2: Guess the number between 1 and 20! Player {current_player} goes first.")
+    status_label.config(text=f"Game 2: Guess the number between 1 and 20! Player {current_player} goes first. Click the button or press Enter.")
 
     secret_num = random.randint(1, 20)
 
     # Entry box for guess input
     guess_entry = tk.Entry(root, font=("Arial", 14))
-    guess_entry.grid(row=6, column=0, columnspan=200, sticky="we", padx=10, pady=10)
+    guess_entry.grid(row=6, column=0, columnspan=2, sticky="we", padx=10, pady=10)
     guess_entry.focus()
+
+    # This will bind the Enter key to have another option to clcik enter
+    guess_entry.bind("<Return>", process_guess)
 
     # Submit button
     guess_button = tk.Button(root, text="Submit Guess", font=("Arial", 14), command=process_guess)
     guess_button.grid(row=6, column=2, padx=10, pady=10)
-
+        
     # Feedback label
     guess_feedback_label = tk.Label(root, text="", font=("Arial", 14), fg="purple")
     guess_feedback_label.grid(row=7, column=0, columnspan=3)
 
     # Shrink window size for Game 2 layout
-    root.geometry("400x250")
+    root.geometry("1000x400")
 
-def process_guess():
+
+def process_guess(event=None):
     global current_player
     guess_str = guess_entry.get()
     if not guess_str.isdigit():
@@ -159,6 +163,10 @@ def process_guess():
             text=f"Player {current_player} guessed {guess} and WINS! Secret was {secret_num}. Press 'N' for next game.")
         guess_entry.config(state="disabled")
         guess_button.config(state="disabled")
+        status_label.config(state="disabled")
+        # This will mark Game 2 as complete so pressing N works
+        global games_played
+        games_played = 2
     else:
         guess_feedback_label.config(text=f"Player {current_player} guessed {guess}. Wrong! Next player's turn.")
         current_player = "O" if current_player == "X" else "X"
@@ -172,23 +180,38 @@ def third_game_placeholder():
         for btn in row:
             btn.grid_remove()
     root.geometry("400x250")
+
+    # This will hide game 2 widgets if they exist
+    if 'guess_entry' in globals():
+        guess_entry.grid_remove()
+    if 'guess_button' in globals():
+        guess_button.grid_remove()
+    if 'guess_feedback_label' in globals():
+        guess_feedback_label.grid_remove()
     
     # Create widgets for the multiplication game
     mult_question_label.config(text="")
     mult_question_label.grid(row=6, column=0, columnspan=3, pady=5)
-    
+
     mult_entry.grid(row=7, column=0, columnspan=2, padx=10, pady=5, sticky="we")
-    mult_entry.focus()
+    mult_entry.config(state="normal")    # Make sure entry is enabled
+    mult_entry.focus()                   # Focus input
+
+    # Bind Enter key to submit multiplication guess
+    mult_entry.bind("<Return>", lambda event: process_mult_guess())
+
     mult_button.grid(row=7, column=2, padx=10, pady=5)
+    mult_button.config(state="normal")  # Enable button
+
     mult_feedback_label.grid(row=8, column=0, columnspan=3)
-    
+
     next_mult_turn()
 
 def next_mult_turn():
     global current_player, MultNum1, MultNum2, product, start_time, timer_id
     
     MultNum1 = random.randint(1, 9)
-    MultNum2 = random.randint(10, 99)
+    MultNum2 = random.randint(1, 9)
     product = MultNum1 * MultNum2
     mult_question_label.config(text=f"Player {current_player}: What is {MultNum1} x {MultNum2}? (5s)")
     
@@ -217,7 +240,7 @@ def process_mult_guess():
         return
 
     guess = int(guess_str)
-    if elapsed > 5:
+    if elapsed > 10:
         mult_feedback_label.config(text=f"Player {current_player} ran out of time! Player {'O' if current_player == 'X' else 'X'} WINS!")
         end_mult_game()
     elif guess == product:
