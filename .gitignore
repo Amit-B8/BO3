@@ -1,0 +1,30 @@
+# Python compilation files (Bytecode)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments (CRITICAL: Do not upload your .venv folder)
+.venv/
+venv/
+env/
+ENV/
+
+# VS Code settings (User specific settings)
+.vscode/
+
+# Environment variables (Safety: Hide API keys/secrets)
+.env
+
+# Distribution / Packaging
+build/
+dist/
+*.egg-info/
+
+# Unit test / Coverage reports
+.coverage
+htmlcov/
+.pytest_cache/
+
+# OS Generated files
+.DS_Store
+Thumbs.db
