@@ -1,0 +1,220 @@
+import tkinter as tk
+import random
+from PIL import Image, ImageTk
+
+class Game1Gauntlet:
+    def __init__(self, root, on_back_to_menu):
+        self.root = root
+        self.on_back_to_menu = on_back_to_menu
+        
+        # --- SCORE TRACKING ---
+        self.p1_wins = 0
+        self.p2_wins = 0
+        self.current_round = 1
+
+        # Load Images
+        self.x_img = ImageTk.PhotoImage(Image.open("x.png").resize((100, 100)))
+        self.o_img = ImageTk.PhotoImage(Image.open("o.png").resize((100, 100)))
+        self.empty_img = ImageTk.PhotoImage(Image.open("empty.png").resize((100, 100)))
+
+        # Start the series
+        self.run_tictactoe()
+
+    def clear_screen(self):
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+    # --- SERIES LOGIC ---
+    def add_win(self, winner):
+        # Update Scores
+        if winner == "Player 1":
+            self.p1_wins += 1
+        elif winner == "Player 2":
+            self.p2_wins += 1
+        
+        # Check for Series Win (Best of 3)
+        if self.p1_wins == 2:
+            self.show_series_winner("Player 1")
+        elif self.p2_wins == 2:
+            self.show_series_winner("Player 2")
+        elif self.current_round == 3:
+            # If round 3 ends and nobody has 2 wins (e.g. 1-1-1 tie), decide by points
+            if self.p1_wins > self.p2_wins:
+                self.show_series_winner("Player 1")
+            elif self.p2_wins > self.p1_wins:
+                self.show_series_winner("Player 2")
+            else:
+                self.show_series_winner("It's a Draw")
+        else:
+            # Series continues -> Go to next game
+            self.current_round += 1
+            if self.current_round == 2:
+                self.root.after(2000, self.run_number_guess)
+            elif self.current_round == 3:
+                self.root.after(2000, self.run_rps)
+
+    def show_series_winner(self, winner_name):
+        self.clear_screen()
+        self.root.title("Series Over")
+        
+        tk.Label(self.root, text="🏆 SERIES COMPLETE 🏆", font=("Arial", 20, "bold"), fg="gold").pack(pady=30)
+        
+        result_text = f"Winner: {winner_name}\n\nFinal Score:\nPlayer 1: {self.p1_wins}\nPlayer 2: {self.p2_wins}"
+        tk.Label(self.root, text=result_text, font=("Arial", 16)).pack(pady=20)
+        
+        tk.Button(self.root, text="Back to Main Menu", bg="green", fg="white", font=("Arial", 14),
+                  command=self.on_back_to_menu).pack(pady=20)
+
+    # ==========================================
+    # ROUND 1: TIC TAC TOE (PvP)
+    # ==========================================
+    def run_tictactoe(self):
+        self.clear_screen()
+        self.root.title("Round 1: Tic Tac Toe")
+        
+        self.current_player = "X"
+        self.board = [["" for _ in range(3)] for _ in range(3)]
+        self.buttons = []
+        self.game_active = True
+
+        # Show current score at top
+        score_text = f"Score: P1 ({self.p1_wins}) - P2 ({self.p2_wins})"
+        tk.Label(self.root, text=score_text, font=("Arial", 12), fg="gray").grid(row=0, column=0, columnspan=3)
+        
+        self.status_label = tk.Label(self.root, text="Tic Tac Toe: Player X (P1) Turn", font=("Arial", 14))
+        self.status_label.grid(row=1, column=0, columnspan=3, pady=10)
+
+        for i in range(3):
+            row_btns = []
+            for j in range(3):
+                btn = tk.Button(self.root, image=self.empty_img, 
+                                command=lambda r=i, c=j: self.on_ttt_click(r, c))
+                btn.grid(row=i+2, column=j)
+                row_btns.append(btn)
+            self.buttons.append(row_btns)
+
+    def on_ttt_click(self, r, c):
+        if not self.game_active or self.board[r][c] != "":
+            return
+
+        btn = self.buttons[r][c]
+        if self.current_player == "X":
+            btn.config(image=self.x_img)
+            self.board[r][c] = "X"
+        else:
+            btn.config(image=self.o_img)
+            self.board[r][c] = "O"
+
+        if self.check_ttt_win(self.current_player):
+            winner = "Player 1" if self.current_player == "X" else "Player 2"
+            self.status_label.config(text=f"{winner} Wins Round 1!", fg="blue")
+            self.game_active = False
+            self.add_win(winner)
+        elif all(self.board[i][j] != "" for i in range(3) for j in range(3)):
+            self.status_label.config(text="Tie! No points awarded.", fg="orange")
+            self.game_active = False
+            self.add_win("Draw") 
+        else:
+            self.current_player = "O" if self.current_player == "X" else "X"
+            p_name = "P1" if self.current_player == "X" else "P2"
+            self.status_label.config(text=f"Tic Tac Toe: Player {self.current_player} ({p_name}) Turn")
+
+    def check_ttt_win(self, p):
+        b = self.board
+        for i in range(3):
+            if all(b[i][j] == p for j in range(3)): return True
+            if all(b[j][i] == p for j in range(3)): return True
+        if b[0][0] == p and b[1][1] == p and b[2][2] == p: return True
+        if b[0][2] == p and b[1][1] == p and b[2][0] == p: return True
+        return False
+
+    # ==========================================
+    # ROUND 2: NUMBER GUESS (P1 vs Chance)
+    # ==========================================
+    def run_number_guess(self):
+        self.clear_screen()
+        self.root.title("Round 2: Number Guess")
+        self.secret_num = random.randint(1, 10)
+
+        # Show Score
+        tk.Label(self.root, text=f"Score: P1 ({self.p1_wins}) - P2 ({self.p2_wins})", font=("Arial", 12), fg="gray").pack()
+        
+        tk.Label(self.root, text="Round 2: Number Guess", font=("Arial", 16, "bold")).pack(pady=10)
+        tk.Label(self.root, text="Player 1: Guess the number (1-10).\nIf correct, P1 gets point.\nIf wrong, P2 gets point.", font=("Arial", 12)).pack(pady=5)
+        
+        self.guess_entry = tk.Entry(self.root, font=("Arial", 14))
+        self.guess_entry.pack(pady=10)
+        self.guess_entry.bind("<Return>", lambda e: self.check_guess())
+
+        tk.Button(self.root, text="Submit Guess", font=("Arial", 12), command=self.check_guess).pack(pady=5)
+        self.guess_feedback = tk.Label(self.root, text="", font=("Arial", 12))
+        self.guess_feedback.pack(pady=10)
+
+    def check_guess(self):
+        try:
+            val = int(self.guess_entry.get())
+            if val == self.secret_num:
+                self.guess_feedback.config(text="CORRECT! Point for Player 1.", fg="green")
+                self.add_win("Player 1")
+            else:
+                self.guess_feedback.config(text=f"WRONG! It was {self.secret_num}. Point for Player 2.", fg="red")
+                self.add_win("Player 2")
+        except ValueError:
+            self.guess_feedback.config(text="Please enter a valid number.")
+
+    # ==========================================
+    # ROUND 3: ROCK PAPER SCISSORS (P1 vs P2/CPU)
+    # ==========================================
+    def run_rps(self):
+        self.clear_screen()
+        self.root.title("Round 3: Rock Paper Scissors")
+
+        # Show Score
+        tk.Label(self.root, text=f"Score: P1 ({self.p1_wins}) - P2 ({self.p2_wins})", font=("Arial", 12), fg="gray").pack()
+        
+        tk.Label(self.root, text="Round 3: Rock Paper Scissors", font=("Arial", 16, "bold")).pack(pady=10)
+        tk.Label(self.root, text="Player 1 vs Computer (representing Player 2)", font=("Arial", 12)).pack(pady=5)
+        
+        self.rps_result_label = tk.Label(self.root, text="Choose your weapon!", font=("Arial", 14))
+        self.rps_result_label.pack(pady=10)
+
+        btn_frame = tk.Frame(self.root)
+        btn_frame.pack(pady=10)
+
+        for choice in ["Rock", "Paper", "Scissors"]:
+            tk.Button(btn_frame, text=choice, font=("Arial", 12), width=10,
+                      command=lambda c=choice: self.play_rps(c)).pack(side="left", padx=5)
+
+    def play_rps(self, player_choice):
+        options = ["Rock", "Paper", "Scissors"]
+        comp_choice = random.choice(options) # Computer acts as Player 2
+        
+        outcome = ""
+        winner = ""
+        
+        if player_choice == comp_choice:
+            outcome = "It's a Tie!"
+            winner = "Draw"
+        elif (player_choice == "Rock" and comp_choice == "Scissors") or \
+             (player_choice == "Paper" and comp_choice == "Rock") or \
+             (player_choice == "Scissors" and comp_choice == "Paper"):
+            outcome = "Player 1 Wins!"
+            winner = "Player 1"
+        else:
+            outcome = "Player 2 (Computer) Wins!"
+            winner = "Player 2"
+
+        self.rps_result_label.config(text=f"P2 Chose: {comp_choice}\n{outcome}", fg="blue")
+        
+        # Disable buttons so they can't play twice
+        for widget in self.root.winfo_children():
+            if isinstance(widget, tk.Frame):
+                for btn in widget.winfo_children():
+                    btn.config(state="disabled")
+
+        # Delay slightly so they can read the result before series ends
+        self.root.after(1500, lambda: self.add_win(winner))
+
+# Entry point called by main.py
+def run(root, on_back_callback):
+    Game1Gauntlet(root, on_back_callback)
