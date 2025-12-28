@@ -129,38 +129,81 @@ class Game1Gauntlet:
         return False
 
     # ==========================================
-    # ROUND 2: NUMBER GUESS (P1 vs Chance)
+    # ROUND 2: NUMBER GUESS (P1 vs P2)
+    # ==========================================
+    # ==========================================
+    # ROUND 2: NUMBER GUESS (Closest Wins)
     # ==========================================
     def run_number_guess(self):
         self.clear_screen()
-        self.root.title("Round 2: Number Guess")
-        self.secret_num = random.randint(1, 10)
+        self.root.title("Round 2: Closest Guess")
+        
+        # 1. Generate the secret number (1-20)
+        self.secret_num = random.randint(1, 20)
 
-        # Show Score
+        # Show Score at the top
         tk.Label(self.root, text=f"Score: P1 ({self.p1_wins}) - P2 ({self.p2_wins})", font=("Arial", 12), fg="gray").pack()
         
-        tk.Label(self.root, text="Round 2: Number Guess", font=("Arial", 16, "bold")).pack(pady=10)
-        tk.Label(self.root, text="Player 1: Guess the number (1-10).\nIf correct, P1 gets point.\nIf wrong, P2 gets point.", font=("Arial", 12)).pack(pady=5)
-        
-        self.guess_entry = tk.Entry(self.root, font=("Arial", 14))
-        self.guess_entry.pack(pady=10)
-        self.guess_entry.bind("<Return>", lambda e: self.check_guess())
+        tk.Label(self.root, text="Round 2: Closest Guess Wins!", font=("Arial", 16, "bold")).pack(pady=10)
+        tk.Label(self.root, text=f"I am thinking of a number between 1 and 20.\nBoth players guess. Whoever is closer wins!", font=("Arial", 12)).pack(pady=5)
 
-        tk.Button(self.root, text="Submit Guess", font=("Arial", 12), command=self.check_guess).pack(pady=5)
+        # --- Player 1 Input ---
+        tk.Label(self.root, text="Player 1 Guess:", font=("Arial", 10, "bold"), fg="blue").pack(pady=(10, 0))
+        self.p1_entry = tk.Entry(self.root, font=("Arial", 14))
+        self.p1_entry.pack(pady=5)
+
+        # --- Player 2 Input ---
+        tk.Label(self.root, text="Player 2 Guess:", font=("Arial", 10, "bold"), fg="red").pack(pady=(10, 0))
+        self.p2_entry = tk.Entry(self.root, font=("Arial", 14))
+        self.p2_entry.pack(pady=5)
+
+        # Submit Button
+        tk.Button(self.root, text="Submit Both Guesses", font=("Arial", 12), bg="lightgray", 
+                  command=self.check_closest_guess).pack(pady=20)
+        
+        # Feedback Label
         self.guess_feedback = tk.Label(self.root, text="", font=("Arial", 12))
         self.guess_feedback.pack(pady=10)
 
-    def check_guess(self):
+    def check_closest_guess(self):
         try:
-            val = int(self.guess_entry.get())
-            if val == self.secret_num:
-                self.guess_feedback.config(text="CORRECT! Point for Player 1.", fg="green")
-                self.add_win("Player 1")
+            # 1. Get inputs
+            p1_val = int(self.p1_entry.get())
+            p2_val = int(self.p2_entry.get())
+
+            # 2. Calculate distances from secret number
+            p1_diff = abs(p1_val - self.secret_num)
+            p2_diff = abs(p2_val - self.secret_num)
+
+            result_text = f"Secret Number was {self.secret_num}!\n"
+            result_text += f"P1 Guessed: {p1_val} (Off by {p1_diff})\n"
+            result_text += f"P2 Guessed: {p2_val} (Off by {p2_diff})\n\n"
+
+            winner = ""
+
+            # 3. Determine Winner
+            if p1_diff < p2_diff:
+                result_text += "Player 1 is closer! P1 Wins Round."
+                self.guess_feedback.config(text=result_text, fg="blue")
+                winner = "Player 1"
+            elif p2_diff < p1_diff:
+                result_text += "Player 2 is closer! P2 Wins Round."
+                self.guess_feedback.config(text=result_text, fg="red")
+                winner = "Player 2"
             else:
-                self.guess_feedback.config(text=f"WRONG! It was {self.secret_num}. Point for Player 2.", fg="red")
-                self.add_win("Player 2")
+                result_text += "It's a Tie! No points awarded."
+                self.guess_feedback.config(text=result_text, fg="orange")
+                winner = "Draw"
+
+            # 4. Disable inputs so they can't submit again
+            self.p1_entry.config(state="disabled")
+            self.p2_entry.config(state="disabled")
+
+            # 5. Move to next round after delay
+            self.root.after(3000, lambda: self.add_win(winner))
+
         except ValueError:
-            self.guess_feedback.config(text="Please enter a valid number.")
+            self.guess_feedback.config(text="Please enter valid numbers for both players!", fg="red")
 
     # ==========================================
     # ROUND 3: ROCK PAPER SCISSORS (P1 vs P2/CPU)
